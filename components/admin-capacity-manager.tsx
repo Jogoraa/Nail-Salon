@@ -1,4 +1,4 @@
-"use client"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "use client"
 
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
+import {                                                                                                                                
   Dialog, 
   DialogContent, 
-  DialogHeader, 
+  DialogHeader,                                                                                                                                                                                                                                                                                                 
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog"
@@ -23,7 +23,11 @@ import {
   Edit,
   Save,
   X,
-  Plus
+  Plus,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+  Zap,
+  Shield,
+  BarChart3,
+  Activity
 } from "lucide-react"
 import type { Service } from "@/lib/supabase"
 
@@ -99,18 +103,12 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
         })
       })
 
-      const result = await response.json()
-
-      if (result.success) {
-        setMessage({ type: "success", text: result.message })
-        setServiceConfigs(prev => 
-          prev.map(config => 
-            config.id === serviceId ? { ...config, ...updates } : config
-          )
-        )
+      if (response.ok) {
+        setMessage({ type: "success", text: "Service capacity updated successfully" })
         setEditingService(null)
+        loadServiceConfigs()
       } else {
-        setMessage({ type: "error", text: result.message })
+        throw new Error('Failed to update service capacity')
       }
     } catch (error) {
       console.error("Error updating service capacity:", error)
@@ -130,20 +128,17 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'set_override',
+          action: 'create_override',
           ...overrideData
         })
       })
 
-      const result = await response.json()
-
-      if (result.success) {
-        setMessage({ type: "success", text: result.message })
+      if (response.ok) {
+        setMessage({ type: "success", text: "Capacity override created successfully" })
         setShowOverrideDialog(false)
-        // Refresh overrides list
         loadOverrides()
       } else {
-        setMessage({ type: "error", text: result.message })
+        throw new Error('Failed to create capacity override')
       }
     } catch (error) {
       console.error("Error creating capacity override:", error)
@@ -152,143 +147,179 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
   }
 
   const loadOverrides = async () => {
-    // This would load existing overrides from the API
-    // For now, we'll use empty array
-    setOverrides([])
+    // Implementation for loading overrides
   }
 
   const ServiceConfigCard = ({ config }: { config: ServiceCapacityConfig }) => {
-    const [localConfig, setLocalConfig] = useState(config)
-    const isEditing = editingService === config.id
+    const [editing, setEditing] = useState(false)
+    const [formData, setFormData] = useState(config)
 
     const handleSave = () => {
-      updateServiceCapacity(config.id, {
-        maxBookingsPerSlot: localConfig.maxBookingsPerSlot,
-        defaultStartTime: localConfig.defaultStartTime,
-        defaultEndTime: localConfig.defaultEndTime,
-        slotDuration: localConfig.slotDuration,
-        bufferTime: localConfig.bufferTime
-      })
+      updateServiceCapacity(config.id, formData)
+      setEditing(false)
     }
 
     const handleCancel = () => {
-      setLocalConfig(config)
-      setEditingService(null)
+      setFormData(config)
+      setEditing(false)
     }
 
     return (
-      <Card className="mb-4">
-        <CardHeader className="pb-3">
+      <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{config.name}</CardTitle>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Settings className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold text-slate-900">{config.name}</CardTitle>
+                <p className="text-sm text-slate-600">Service capacity configuration</p>
+              </div>
+            </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary">
-                <Users className="w-3 h-3 mr-1" />
-                {config.maxBookingsPerSlot} per slot
-              </Badge>
-              {!isEditing ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditingService(config.id)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+              {editing ? (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancel}
+                    className="border-slate-300 text-slate-600 hover:bg-slate-50"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </>
               ) : (
-                <div className="flex space-x-1">
-                  <Button variant="outline" size="sm" onClick={handleSave}>
-                    <Save className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(true)}
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
               )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Bookings per Slot
-              </label>
-              {isEditing ? (
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={localConfig.maxBookingsPerSlot}
-                  onChange={(e) => setLocalConfig(prev => ({
-                    ...prev,
-                    maxBookingsPerSlot: parseInt(e.target.value) || 1
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                />
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-md">{config.maxBookingsPerSlot}</div>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <Users className="w-4 h-4 inline mr-2" />
+                  Max Bookings per Slot
+                </label>
+                {editing ? (
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.maxBookingsPerSlot}
+                    onChange={(e) => setFormData({...formData, maxBookingsPerSlot: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 px-3 py-1">
+                      {config.maxBookingsPerSlot}
+                    </Badge>
+                    <span className="text-sm text-slate-600">concurrent bookings</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Slot Duration
+                </label>
+                {editing ? (
+                  <input
+                    type="number"
+                    min="15"
+                    max="120"
+                    step="15"
+                    value={formData.slotDuration}
+                    onChange={(e) => setFormData({...formData, slotDuration: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-800 px-3 py-1">
+                      {config.slotDuration} min
+                    </Badge>
+                    <span className="text-sm text-slate-600">per appointment</span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Time
-              </label>
-              {isEditing ? (
-                <input
-                  type="time"
-                  value={localConfig.defaultStartTime}
-                  onChange={(e) => setLocalConfig(prev => ({
-                    ...prev,
-                    defaultStartTime: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                />
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-md">{config.defaultStartTime}</div>
-              )}
-            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Operating Hours
+                </label>
+                {editing ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="time"
+                      value={formData.defaultStartTime}
+                      onChange={(e) => setFormData({...formData, defaultStartTime: e.target.value})}
+                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="time"
+                      value={formData.defaultEndTime}
+                      onChange={(e) => setFormData({...formData, defaultEndTime: e.target.value})}
+                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 px-3 py-1">
+                      {config.defaultStartTime} - {config.defaultEndTime}
+                    </Badge>
+                    <span className="text-sm text-slate-600">daily</span>
+                  </div>
+                )}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Time
-              </label>
-              {isEditing ? (
-                <input
-                  type="time"
-                  value={localConfig.defaultEndTime}
-                  onChange={(e) => setLocalConfig(prev => ({
-                    ...prev,
-                    defaultEndTime: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                />
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-md">{config.defaultEndTime}</div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Slot Duration (min)
-              </label>
-              {isEditing ? (
-                <select
-                  value={localConfig.slotDuration}
-                  onChange={(e) => setLocalConfig(prev => ({
-                    ...prev,
-                    slotDuration: parseInt(e.target.value)
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                >
-                  <option value={15}>15 min</option>
-                  <option value={30}>30 min</option>
-                  <option value={45}>45 min</option>
-                  <option value={60}>60 min</option>
-                </select>
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-md">{config.slotDuration} min</div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <AlertTriangle className="w-4 h-4 inline mr-2" />
+                  Buffer Time
+                </label>
+                {editing ? (
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    step="5"
+                    value={formData.bufferTime}
+                    onChange={(e) => setFormData({...formData, bufferTime: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 px-3 py-1">
+                      {config.bufferTime} min
+                    </Badge>
+                    <span className="text-sm text-slate-600">between appointments</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -297,35 +328,36 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
   }
 
   const OverrideDialog = () => {
-    const [overrideForm, setOverrideForm] = useState({
+    const [formData, setFormData] = useState({
       serviceId: selectedServiceForOverride,
       date: "",
-      time: "",
+      time: "09:00",
       maxBookings: 1,
       reason: ""
     })
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault()
-      createCapacityOverride(overrideForm)
+      createCapacityOverride(formData)
     }
 
     return (
       <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
-        <DialogContent>
+        <DialogContent className="bg-white/95 backdrop-blur-md border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Create Capacity Override</DialogTitle>
+            <DialogTitle className="flex items-center text-slate-900">
+              <Zap className="w-6 h-6 mr-3 text-blue-600" />
+              Create Capacity Override
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Service</label>
               <select
-                value={overrideForm.serviceId}
-                onChange={(e) => setOverrideForm(prev => ({ ...prev, serviceId: e.target.value }))}
+                value={formData.serviceId}
+                onChange={(e) => setFormData({...formData, serviceId: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
               >
                 <option value="">Select a service</option>
                 {services.map(service => (
@@ -333,76 +365,71 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
                 ))}
               </select>
             </div>
-
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Date</label>
                 <input
                   type="date"
-                  value={overrideForm.date}
-                  onChange={(e) => setOverrideForm(prev => ({ ...prev, date: e.target.value }))}
+                  value={formData.date}
+                  onChange={(e) => setFormData({...formData, date: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Time
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Time</label>
                 <input
                   type="time"
-                  value={overrideForm.time}
-                  onChange={(e) => setOverrideForm(prev => ({ ...prev, time: e.target.value }))}
+                  value={formData.time}
+                  onChange={(e) => setFormData({...formData, time: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                 />
               </div>
             </div>
-
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Bookings
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Max Bookings</label>
               <input
                 type="number"
-                min="0"
-                max="20"
-                value={overrideForm.maxBookings}
-                onChange={(e) => setOverrideForm(prev => ({ 
-                  ...prev, 
-                  maxBookings: parseInt(e.target.value) || 0 
-                }))}
+                min="1"
+                max="10"
+                value={formData.maxBookings}
+                onChange={(e) => setFormData({...formData, maxBookings: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
               />
             </div>
-
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reason
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Reason</label>
               <textarea
-                value={overrideForm.reason}
-                onChange={(e) => setOverrideForm(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="e.g., Holiday closure, Special event, Maintenance"
+                value={formData.reason}
+                onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="Explain why this override is needed..."
+                required
               />
             </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setShowOverrideDialog(false)}
+                className="border-slate-300 text-slate-600 hover:bg-slate-50"
               >
                 Cancel
               </Button>
-              <Button type="submit">Create Override</Button>
+              <Button
+                type="submit" 
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Override
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -410,106 +437,81 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Service Capacity Management</h2>
-        <Button onClick={() => setShowOverrideDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Override
-        </Button>
-      </div>
-
       {message && (
-        <Alert className={message.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-          <AlertDescription className={message.type === "success" ? "text-green-700" : "text-red-700"}>
-            {message.text}
-          </AlertDescription>
+        <Alert className={`border-0 ${
+          message.type === "success" 
+            ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
+            : "bg-rose-50 text-rose-800 border-rose-200"
+        }`}>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
 
       <Tabs defaultValue="services" className="w-full">
-        <TabsList>
-          <TabsTrigger value="services">Service Configuration</TabsTrigger>
-          <TabsTrigger value="overrides">Capacity Overrides</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
+          <TabsTrigger 
+            value="services" 
+            className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Service Configuration
+          </TabsTrigger>
+          <TabsTrigger 
+            value="overrides"
+            className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Capacity Overrides
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="services" className="space-y-4">
-          <div className="text-sm text-gray-600 mb-4">
-            Configure default capacity settings for each service. These settings apply to all time slots unless overridden.
-          </div>
-          
-          {isLoading ? (
-            <div className="text-center py-8">Loading service configurations...</div>
-          ) : (
-            serviceConfigs.map(config => (
+        <TabsContent value="services" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {serviceConfigs.map(config => (
               <ServiceConfigCard key={config.id} config={config} />
-            ))
-          )}
+            ))}
+          </div>
         </TabsContent>
 
-        <TabsContent value="overrides" className="space-y-4">
-          <div className="text-sm text-gray-600 mb-4">
-            Create specific capacity overrides for individual dates and times. Useful for holidays, special events, or maintenance periods.
-          </div>
-          
-          {overrides.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No capacity overrides configured</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => setShowOverrideDialog(true)}
-                >
-                  Create First Override
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {overrides.map(override => (
-                <Card key={override.id}>
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">
-                          {services.find(s => s.id === override.serviceId)?.name}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {override.overrideDate} at {override.overrideTime} - {override.maxBookings} bookings max
-                        </div>
-                        {override.reason && (
-                          <div className="text-sm text-gray-500">{override.reason}</div>
-                        )}
-                      </div>
-                      <Badge variant={override.isActive ? "default" : "secondary"}>
-                        {override.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        <TabsContent value="overrides" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Capacity Overrides</h3>
+              <p className="text-sm text-slate-600">Manage special capacity settings for specific dates and times</p>
             </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="text-sm text-gray-600 mb-4">
-            Capacity utilization analytics and insights.
+            <Button
+              onClick={() => setShowOverrideDialog(true)}
+              className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Override
+            </Button>
           </div>
           
-          <Card>
-            <CardContent className="text-center py-8">
-              <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Analytics dashboard coming soon</p>
-              <p className="text-sm text-gray-500 mt-2">
-                This will show capacity utilization, peak hours, and optimization recommendations.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-50 rounded-lg p-6 text-center">
+            <Zap className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-slate-600 mb-2">No Overrides Yet</h4>
+            <p className="text-slate-500 mb-4">Create capacity overrides to handle special events, holidays, or peak times</p>
+            <Button
+              onClick={() => setShowOverrideDialog(true)}
+              variant="outline"
+              className="border-slate-300 text-slate-600 hover:bg-slate-100"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create First Override
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
 

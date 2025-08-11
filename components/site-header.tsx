@@ -6,6 +6,7 @@ import BookingButtonsAndModal from "@/components/booking-buttons-and-modal"
 import MobileMenuOverlay from "@/components/mobile-menu-overlay"
 import type { Service } from "@/lib/supabase"
 import { X,Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
 interface SiteHeaderProps {
   services: Service[]
 }
@@ -49,16 +50,23 @@ return (
             </Link>
           </nav>
 
+          {/* New Booking Button - More Prominent */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link href="/improved-booking">
+              <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-2 shadow-lg">
+                <span className="mr-2">✨</span>
+                New Booking
+              </Button>
+            </Link>
+            <div className="w-px h-8 bg-gray-300"></div>
+            <BookingButtonsAndModal services={services} />
+          </div>
+
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center space-x-2">
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-rose-600 focus:outline-none">
               {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
-          </div>
-
-          {/* Booking Buttons always visible */}
-          <div className="hidden md:block">
-            <BookingButtonsAndModal services={services} />
           </div>
         </div>
 
@@ -80,7 +88,14 @@ return (
             <Link href="#contact" className="block text-gray-700 hover:text-rose-600 text-base">
               Contact
             </Link>
-            <BookingButtonsAndModal services={services} />
+            <div className="pt-2 border-t border-gray-200">
+              <Link href="/improved-booking" className="block text-blue-600 hover:text-blue-700 text-base font-medium">
+                ✨ New Booking System
+              </Link>
+            </div>
+            <div className="pt-2">
+              <BookingButtonsAndModal services={services} />
+            </div>
           </div>
         )}
       </div>

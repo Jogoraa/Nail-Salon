@@ -5,10 +5,10 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Trash2, MailOpen, Mail } from "lucide-react"
+import { MoreHorizontal, Trash2, CheckCircle, XCircle, Clock, User, MessageSquare, Eye, Reply, Archive } from "lucide-react"
 import type { ContactMessage } from "@/lib/supabase"
-import { updateContactMessageStatus, deleteContactMessage } from "@/lib/actions"
-import { toast } from "sonner" // Assuming sonner is available for toasts
+import { updateMessageStatus, deleteMessage } from "@/lib/actions"
+import { toast } from "sonner"
 
 interface MessagesTableProps {
   messages: ContactMessage[]
@@ -20,7 +20,7 @@ export default function MessagesTable({ messages }: MessagesTableProps) {
 
   const handleStatusChange = (id: string, newStatus: ContactMessage["status"]) => {
     startTransition(async () => {
-      const result = await updateContactMessageStatus(id, newStatus)
+      const result = await updateMessageStatus(id, newStatus)
       if (result.success) {
         toast.success(result.message)
       } else {
@@ -35,7 +35,7 @@ export default function MessagesTable({ messages }: MessagesTableProps) {
     }
     setDeletingId(id)
     startTransition(async () => {
-      const result = await deleteContactMessage(id)
+      const result = await deleteMessage(id)
       if (result.success) {
         toast.success(result.message)
       } else {
@@ -45,86 +45,171 @@ export default function MessagesTable({ messages }: MessagesTableProps) {
     })
   }
 
-  const getStatusVariant = (status: ContactMessage["status"]) => {
+  const getStatusColor = (status: ContactMessage["status"]) => {
     switch (status) {
       case "new":
-        return "default"
+        return "bg-blue-100 text-blue-800 border-blue-200"
       case "read":
-        return "secondary"
+        return "bg-emerald-100 text-emerald-800 border-emerald-200"
       case "replied":
-        return "outline"
+        return "bg-purple-100 text-purple-800 border-purple-200"
+      case "archived":
+        return "bg-slate-100 text-slate-800 border-slate-200"
       default:
-        return "secondary"
+        return "bg-slate-100 text-slate-800 border-slate-200"
+    }
+  }
+
+  const getStatusIcon = (status: ContactMessage["status"]) => {
+    switch (status) {
+      case "new":
+        return <Clock className="w-4 h-4" />
+      case "read":
+        return <Eye className="w-4 h-4" />
+      case "replied":
+        return <Reply className="w-4 h-4" />
+      case "archived":
+        return <Archive className="w-4 h-4" />
+      default:
+        return <Clock className="w-4 h-4" />
     }
   }
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="bg-white/60 backdrop-blur-sm rounded-xl border-0 shadow-lg overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Sender</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Service</TableHead>
-            <TableHead>Message</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="bg-slate-50/80 hover:bg-slate-100/80 border-0">
+            <TableHead className="text-slate-700 font-semibold">
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Customer</span>
+              </div>
+            </TableHead>
+            <TableHead className="text-slate-700 font-semibold">
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="w-4 h-4" />
+                <span>Message</span>
+              </div>
+            </TableHead>
+            <TableHead className="text-slate-700 font-semibold">Date</TableHead>
+            <TableHead className="text-slate-700 font-semibold">Status</TableHead>
+            <TableHead className="text-right text-slate-700 font-semibold">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {messages.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-gray-500">
-                No messages found.
+            <TableRow className="hover:bg-slate-50/50 border-0">
+              <TableCell colSpan={5} className="h-32 text-center">
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                    <MessageSquare className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <div className="text-slate-500">
+                    <p className="font-medium">No messages found</p>
+                    <p className="text-sm">When customers send messages, they will appear here</p>
+                  </div>
+                </div>
               </TableCell>
             </TableRow>
           ) : (
             messages.map((message) => (
-              <TableRow key={message.id}>
-                <TableCell>
-                  <div className="font-medium">
-                    {message.first_name} {message.last_name}
+              <TableRow key={message.id} className="hover:bg-slate-50/50 border-0 transition-colors duration-200">
+                <TableCell className="py-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">
+                        {message.name}
+                      </div>
+                      <div className="text-sm text-slate-600">{message.email}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-500">{message.phone}</div>
                 </TableCell>
-                <TableCell>{message.email}</TableCell>
-                <TableCell>{message.service?.name || "General Inquiry"}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-sm text-gray-600">
-                  {message.message || "No message provided."}
+                <TableCell className="py-4">
+                  <div className="max-w-xs">
+                    <div className="font-medium text-slate-900 mb-1">
+                      {message.subject || "No Subject"}
+                    </div>
+                    <div className="text-sm text-slate-600 line-clamp-2">
+                      {message.message}
+                    </div>
+                  </div>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(message.status)}>{message.status}</Badge>
+                <TableCell className="py-4">
+                  <div className="text-sm text-slate-600">
+                    {new Date(message.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {new Date(message.created_at).toLocaleTimeString()}
+                  </div>
                 </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending && deletingId === message.id}>
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(message.id, "read")}
-                        disabled={message.status === "read" || isPending}
-                      >
-                        <MailOpen className="mr-2 h-4 w-4" /> Mark as Read
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(message.id, "replied")}
-                        disabled={message.status === "replied" || isPending}
-                      >
-                        <Mail className="mr-2 h-4 w-4" /> Mark as Replied
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(message.id)}
-                        disabled={isPending}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="py-4">
+                  <Badge 
+                    variant="outline" 
+                    className={`${getStatusColor(message.status)} border px-3 py-1 rounded-full flex items-center space-x-1 w-fit`}
+                  >
+                    {getStatusIcon(message.status)}
+                    <span className="capitalize">{message.status}</span>
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-4 text-right">
+                  <div className="flex items-center justify-end space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400"
+                      onClick={() => {
+                        // View message details
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-md border-0 shadow-xl">
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(message.id, "read")}
+                          className="text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Mark as Read
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(message.id, "replied")}
+                          className="text-blue-700 hover:bg-blue-50 cursor-pointer"
+                        >
+                          <Reply className="w-4 h-4 mr-2" />
+                          Mark as Replied
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(message.id, "archived")}
+                          className="text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        >
+                          <Archive className="w-4 h-4 mr-2" />
+                          Archive Message
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(message.id)}
+                          className="text-rose-700 hover:bg-rose-50 cursor-pointer"
+                          disabled={deletingId === message.id}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          {deletingId === message.id ? "Deleting..." : "Delete"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))

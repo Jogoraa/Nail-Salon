@@ -9,6 +9,12 @@ export interface Service {
   is_active: boolean
   created_at: string
   calcom_event_type_id: string | null // New field for Cal.com integration
+  // Capacity management fields
+  max_bookings_per_slot?: number
+  default_start_time?: string
+  default_end_time?: string
+  slot_duration?: number
+  buffer_time?: number
 }
 
 export interface Customer {

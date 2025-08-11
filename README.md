@@ -840,7 +840,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-**Built with ❤️ by the Manus AI Team**
+**Built with ❤️ by the AJ  Team**
 
 For questions, support, or feature requests, please contact us or open an issue on GitHub.
 

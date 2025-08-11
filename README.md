@@ -1,4 +1,4 @@
-# Hami Nail Salon - Advanced Booking Management System
+# Haymi Nail Salon - Advanced Booking Management System
 
 A sophisticated Next.js application for nail salon booking management with real-time capacity control, multi-service appointments, and comprehensive admin dashboard.
 

@@ -10,14 +10,14 @@ import ModernSiteHeader from "@/components/modern-site-header"
 import ModernHero from "@/components/modern-hero"
 import ModernServices from "@/components/modern-services"
 import CarouselSection from "@/components/carousel-section"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
-
+                                                                      //                                                                                                                                                            
 export default async function NailSalonWebsite() {
   const services = await getServices()
 
-  const galleryImages = [
+  const galleryImages = [                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
     "/9587540.png?height=400&width=400",
     "/9587518.png?height=400&width=400",
-    "/9587542.jpg?height=400&width=400",
+    "/9587542.jpg?height=400&width=400",                                                                                                                                            
     "/9587543.jpg?height=400&width=400",
     "/9587545.jpg?height=400&width=400",
     "/9587546.jpg?height=400&width=400",
@@ -49,7 +49,7 @@ export default async function NailSalonWebsite() {
                 </Button>
               </Link>
             </div>
-          </div>
+          </div>                                                                                                                                                                                                                                                                                                                                                  
         </div>
       </section>
 

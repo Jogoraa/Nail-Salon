@@ -34,6 +34,7 @@ export interface AvailabilityResponse {
 
 /**
  * Get availability for multiple services on a specific date
+ * This version works with the existing database schema
  */
 export async function getServiceAvailability(request: AvailabilityRequest): Promise<AvailabilityResponse> {
   console.log("=== GETTING SERVICE AVAILABILITY ===")
@@ -58,44 +59,89 @@ export async function getServiceAvailability(request: AvailabilityRequest): Prom
       throw new Error("At least one service ID is required")
     }
 
-    // Use the database function to get availability
-    const { data: availabilityData, error } = await supabaseAdmin
-      .rpc('get_service_availability', {
-        p_service_ids: serviceIds,
-        p_date: date,
-        p_start_time: startTime,
-        p_end_time: endTime,
-        p_slot_duration: slotDuration
-      })
+    // Get service details first
+    const { data: services, error: servicesError } = await supabaseAdmin
+      .from('services')
+      .select('id, name')
+      .in('id', serviceIds)
+      .eq('is_active', true)
 
-    if (error) {
-      console.error("Error fetching availability:", error)
-      throw new Error("Failed to fetch availability data")
+    if (servicesError) {
+      console.error("Error fetching services:", servicesError)
+      throw new Error("Failed to fetch service information")
     }
 
-    // Group results by service
+    if (!services || services.length === 0) {
+      throw new Error("No active services found")
+    }
+
+    // Generate time slots
+    const timeSlots = generateTimeSlots(startTime, endTime, slotDuration)
+    
+    // Get existing bookings for the date
+    const { data: existingBookings, error: bookingsError } = await supabaseAdmin
+      .from('appointments')
+      .select(`
+        appointment_time,
+        status,
+        appointment_services!inner(service_id)
+      `)
+      .eq('appointment_date', date)
+      .neq('status', 'cancelled')
+
+    if (bookingsError) {
+      console.error("Error fetching existing bookings:", bookingsError)
+      throw new Error("Failed to fetch existing bookings")
+    }
+
+    // Count bookings per service per time slot
+    const bookingCounts = new Map<string, Map<string, number>>()
+    
+    // Initialize counts
+    serviceIds.forEach(serviceId => {
+      bookingCounts.set(serviceId, new Map())
+      timeSlots.forEach(time => {
+        bookingCounts.get(serviceId)!.set(time, 0)
+      })
+    })
+
+    // Count actual bookings
+    existingBookings?.forEach(booking => {
+      const time = booking.appointment_time
+      booking.appointment_services?.forEach((appointmentService: any) => {
+        const serviceId = appointmentService.service_id
+        if (serviceIds.includes(serviceId)) {
+          const currentCount = bookingCounts.get(serviceId)?.get(time) || 0
+          bookingCounts.get(serviceId)?.set(time, currentCount + 1)
+        }
+      })
+    })
+
+    // Build availability response
     const serviceMap = new Map<string, ServiceAvailability>()
 
-    for (const row of availabilityData || []) {
-      const serviceId = row.service_id
-      
-      if (!serviceMap.has(serviceId)) {
-        serviceMap.set(serviceId, {
-          serviceId,
-          serviceName: row.service_name,
-          timeSlots: []
-        })
-      }
+    services.forEach(service => {
+      const timeSlotsData: TimeSlotAvailability[] = timeSlots.map(time => {
+        const currentBookings = bookingCounts.get(service.id)?.get(time) || 0
+        const maxCapacity = 1 // Default capacity per service per slot
+        const availableSlots = Math.max(0, maxCapacity - currentBookings)
+        const isAvailable = availableSlots > 0
 
-      const service = serviceMap.get(serviceId)!
-      service.timeSlots.push({
-        time: row.time_slot,
-        maxCapacity: row.max_capacity,
-        currentBookings: row.current_bookings,
-        availableSlots: row.available_slots,
-        isAvailable: row.is_available
+        return {
+          time,
+          maxCapacity,
+          currentBookings,
+          availableSlots,
+          isAvailable
+        }
       })
-    }
+
+      serviceMap.set(service.id, {
+        serviceId: service.id,
+        serviceName: service.name,
+        timeSlots: timeSlotsData
+      })
+    })
 
     const response: AvailabilityResponse = {
       date,
@@ -113,7 +159,42 @@ export async function getServiceAvailability(request: AvailabilityRequest): Prom
 }
 
 /**
+ * Generate time slots between start and end time
+ */
+function generateTimeSlots(startTime: string, endTime: string, slotDuration: number): string[] {
+  const slots: string[] = []
+  const start = parseTime(startTime)
+  const end = parseTime(endTime)
+  
+  let current = start
+  while (current <= end) {
+    slots.push(formatTime(current))
+    current += slotDuration
+  }
+  
+  return slots
+}
+
+/**
+ * Parse time string (HH:MM) to minutes
+ */
+function parseTime(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+/**
+ * Format minutes to time string (HH:MM)
+ */
+function formatTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+}
+
+/**
  * Check if specific services can be booked at a given date/time
+ * This version works with the existing database schema
  */
 export async function canBookServices(
   serviceIds: string[],
@@ -127,24 +208,43 @@ export async function canBookServices(
   try {
     const conflicts: string[] = []
 
+    // Get existing bookings for the specific date and time
+    const { data: existingBookings, error: bookingsError } = await supabaseAdmin
+      .from('appointments')
+      .select(`
+        appointment_services!inner(service_id)
+      `)
+      .eq('appointment_date', date)
+      .eq('appointment_time', time)
+      .neq('status', 'cancelled')
+
+    if (bookingsError) {
+      console.error("Error checking existing bookings:", bookingsError)
+      throw new Error("Failed to check booking availability")
+    }
+
+    // Count existing bookings per service
+    const serviceBookingCounts = new Map<string, number>()
+    serviceIds.forEach(id => serviceBookingCounts.set(id, 0))
+
+    existingBookings?.forEach(booking => {
+      booking.appointment_services?.forEach((appointmentService: any) => {
+        const serviceId = appointmentService.service_id
+        if (serviceIds.includes(serviceId)) {
+          const currentCount = serviceBookingCounts.get(serviceId) || 0
+          serviceBookingCounts.set(serviceId, currentCount + 1)
+        }
+      })
+    })
+
+    // Check if each service can be booked
     for (let i = 0; i < serviceIds.length; i++) {
       const serviceId = serviceIds[i]
       const quantity = quantities[i] || 1
+      const currentBookings = serviceBookingCounts.get(serviceId) || 0
+      const maxCapacity = 1 // Default capacity per service per slot
 
-      const { data: canBook, error } = await supabaseAdmin
-        .rpc('can_book_service', {
-          p_service_id: serviceId,
-          p_date: date,
-          p_time: time,
-          p_quantity: quantity
-        })
-
-      if (error) {
-        console.error(`Error checking availability for service ${serviceId}:`, error)
-        throw new Error("Failed to check booking availability")
-      }
-
-      if (!canBook) {
+      if (currentBookings + quantity > maxCapacity) {
         // Get service name for better error message
         const { data: service } = await supabaseAdmin
           .from('services')

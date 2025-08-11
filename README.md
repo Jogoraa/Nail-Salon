@@ -22,6 +22,18 @@ A sophisticated Next.js application for nail salon booking management with real-
 - [Contributing](#contributing)
 - [License](#license)
 
+## Quick Start (Updated!)
+
+**The availability system has been fixed and works immediately with your existing database!**
+
+1. **Clone & Install**: `git clone <repo> && npm install`
+2. **Environment**: Copy `.env.template` to `.env.local` and fill in Supabase credentials
+3. **Database**: Run `scripts/01-create-tables.sql` through `scripts/04-fix-rls-policies.sql`
+4. **Optional Enhancement**: Run `scripts/08-basic-availability-setup.sql` for capacity management
+5. **Start**: `npm run dev` - The booking system works now!
+
+**No complex database migrations required!** The system automatically generates time slots and checks availability using your existing tables.
+
 ## Overview
 
 Hami Nail Salon is a production-ready booking management system designed specifically for nail salons and beauty service providers. The application combines a beautiful customer-facing website with a powerful admin dashboard, featuring advanced capacity management, real-time availability checking, and seamless integration with external calendar systems.
@@ -50,13 +62,14 @@ The system addresses the common challenges faced by service-based businesses: ov
 
 ### Technical Features
 - **Real-Time Updates**: WebSocket-based live updates for availability
-- **Overbooking Prevention**: Sophisticated capacity checking algorithms
+- **Overbooking Prevention**: Sophisticated capacity checking algorithms ✅ **WORKING NOW**
 - **Cal.com Integration**: Seamless calendar synchronization
 - **Email Automation**: Automated booking confirmations and notifications
 - **Row-Level Security**: Database-level security with Supabase RLS
 - **API-First Design**: RESTful APIs for all operations
 - **Performance Optimization**: Caching and query optimization
 - **Mobile Responsive**: Optimized for all device sizes
+- **Immediate Availability**: Dynamic time slot generation without database changes ✅ **NEW**
 
 ## Technology Stack
 
@@ -185,8 +198,14 @@ Run the database setup scripts in order:
 # 2. scripts/02-seed-data.sql
 # 3. scripts/03-row-level-security-fixed.sql
 # 4. scripts/04-fix-rls-policies.sql
-# 5. scripts/06-enhanced-capacity-schema.sql
+# 5. scripts/08-basic-availability-setup.sql (RECOMMENDED for immediate functionality)
+
+# Optional: Enhanced features (run after basic setup is working)
+# 6. scripts/06-enhanced-capacity-schema.sql
+# 7. scripts/07-transactional-booking.sql
 ```
+
+**Important**: The availability system has been updated to work with your existing database schema. Start with the basic setup for immediate functionality.
 
 ### Step 5: Start Development Server
 ```bash
@@ -428,7 +447,21 @@ The `MultiSelectDropdown` component allows customers to select multiple services
 
 ## Capacity Management System
 
-The capacity management system is the core innovation of this application, providing sophisticated overbooking prevention and resource optimization.
+The capacity management system is the core innovation of this application, providing sophisticated overbooking prevention and resource optimization. **The system has been updated to work immediately with your existing database schema.**
+
+### Current Implementation (Immediate)
+- **Dynamic Time Slots**: Generates 30-minute slots from 9:00 AM to 6:00 PM
+- **Real-time Availability**: Counts existing appointments to determine availability
+- **Concurrency Protection**: Prevents double-booking through application-level checks
+- **Conflict Resolution**: Automatically suggests alternative time slots when conflicts occur
+- **No Database Changes Required**: Works with your existing tables structure
+
+### Enhanced Implementation (Future)
+When you're ready for advanced features, the enhanced schema provides:
+- Service schedules and capacity overrides
+- Waitlist management for fully booked slots
+- Availability caching for better performance
+- Transactional booking with database-level advisory locks
 
 ### How It Works
 
@@ -720,6 +753,37 @@ artillery run load-test.yml
 # Database performance testing
 npm run test:db-performance
 ```
+
+## Recent Updates & Fixes
+
+### Availability System Fix (Latest)
+The booking system has been completely updated to resolve the "Function not found" errors and provide immediate functionality:
+
+**What Was Fixed:**
+- Removed dependency on non-existent database functions (`get_service_availability`, `can_book_service`)
+- Implemented direct database queries using existing table structure
+- Added dynamic time slot generation (9:00 AM - 6:00 PM, 30-minute intervals)
+- Implemented application-level concurrency protection
+- Added automatic conflict detection with alternative time suggestions
+
+**Files Updated:**
+- `lib/availability.ts` - Complete rewrite for existing schema compatibility
+- `lib/enhanced-actions.ts` - Simplified booking logic without RPC dependencies
+- `components/service-first-booking-form.tsx` - Enhanced conflict handling
+- `components/enhanced-booking-form.tsx` - Enhanced conflict handling
+- `scripts/08-basic-availability-setup.sql` - Basic database setup script
+
+**Immediate Benefits:**
+- ✅ Works with your current database structure
+- ✅ No complex database migrations required
+- ✅ Real-time availability checking
+- ✅ Prevents double-booking
+- ✅ Suggests alternative times on conflicts
+
+### Setup Instructions
+1. **Immediate Fix**: The system works now without database changes
+2. **Basic Enhancement**: Run `scripts/08-basic-availability-setup.sql` for capacity management
+3. **Advanced Features**: Apply enhanced schema when ready for production
 
 ## Troubleshooting
 

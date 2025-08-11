@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Clock, Users, AlertTriangle, CheckCircle } from "lucide-react"
 import type { Service } from "@/lib/supabase"
-import { bookAppointmentWithCapacityCheck, getBookingAvailability } from "@/lib/enhanced-actions"
+import { bookAppointmentWithCapacityCheck, getBookingAvailability, getSuggestedTimeSlots } from "@/lib/enhanced-actions"
 import MultiSelectDropdown from "./MultiSelectDropdown"
 
 interface EnhancedBookingFormProps {
@@ -39,6 +39,7 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null)
   const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  const [suggestedTimes, setSuggestedTimes] = useState<string[]>([])
   const formRef = useRef<HTMLFormElement | null>(null)
 
   // Update selected services when preSelectedServiceId changes
@@ -111,15 +112,24 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
         setSelectedDate("")
         setSelectedTime("")
         setTimeSlots([])
+        setSuggestedTimes([])
       } else {
         setMessage({ 
           type: "error", 
           text: result?.message || "Booking failed. Please try again." 
         })
+        setSuggestedTimes([])
         
         // If there were conflicts, refresh availability
         if (result?.conflicts) {
           fetchAvailability()
+          // Also fetch suggested alternative time slots to assist the user
+          try {
+            const alternatives = await getSuggestedTimeSlots(selectedServiceIds, selectedDate, selectedTime)
+            setSuggestedTimes(alternatives)
+          } catch {
+            // ignore suggestions failure
+          }
         }
       }
     } catch (error) {
@@ -381,6 +391,24 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
             "Book Appointment"
           )}
         </Button>
+
+        {suggestedTimes.length > 0 && (
+          <div className="mt-4">
+            <div className="text-sm text-gray-700 mb-2">Suggested alternative times:</div>
+            <div className="flex flex-wrap gap-2">
+              {suggestedTimes.map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => setSelectedTime(time)}
+                  className="px-3 py-1 rounded-full border text-sm hover:bg-gray-50"
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Booking Requirements */}
         <div className="text-sm text-gray-600 space-y-1">

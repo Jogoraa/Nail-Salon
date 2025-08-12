@@ -27,32 +27,7 @@ export default async function NailSalonWebsite() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <ModernSiteHeader services={services} />
       
-      <section className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white py-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-30"></div>
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
-                <div className="absolute inset-0 bg-yellow-300 rounded-full blur-sm opacity-50 animate-ping"></div>
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                Revolutionary Booking System
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-purple-100 text-sm hidden md:block">Experience the future of nail care booking</span>
-              <Link href="/improved-booking">
-                <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
-                  Try Now
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
-          </div>                                                                                                                                                                                                                                                                                                                                                  
-        </div>
-      </section>
-
+    
       <ModernHero services={services} />
       <CarouselSection />
       <ModernServices services={services} />
@@ -61,10 +36,7 @@ export default async function NailSalonWebsite() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-30"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
           <div className="max-w-4xl mx-auto">
-            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-full border border-white/20 mb-6">
-              <Zap className="w-5 h-5" />
-              <span className="font-semibold">Revolutionary Technology</span>
-            </div>
+        
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white">
               Experience Our Revolutionary Booking System
             </h2>

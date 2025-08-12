@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Clock, Users, AlertTriangle, CheckCircle } from "lucide-react"
+import { Loader2, Clock, Users, TriangleAlert, CheckCircle } from "lucide-react"
 import type { Service } from "@/lib/supabase"
 import { bookAppointmentWithCapacityCheck, getBookingAvailability, getSuggestedTimeSlots } from "@/lib/enhanced-actions"
 import MultiSelectDropdown from "./MultiSelectDropdown"
@@ -74,7 +74,7 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
       } else {
         setTimeSlots(result.timeSlots)
         // Clear selected time if it's no longer available
-        if (selectedTime && !result.timeSlots.find(slot => slot.time === selectedTime && slot.isAvailable)) {
+        if (selectedTime && !result.timeSlots.find((slot: TimeSlotOption) => slot.time === selectedTime && slot.isAvailable)) {
           setSelectedTime("")
         }
       }
@@ -161,7 +161,7 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
   }
 
   const getTimeSlotIcon = (slot: TimeSlotOption) => {
-    if (!slot.isAvailable) return <AlertTriangle className="w-4 h-4" />
+    if (!slot.isAvailable) return <TriangleAlert className="w-4 h-4" />
     
     const totalRemaining = slot.availabilityDetails.reduce((sum, detail) => sum + detail.remainingSlots, 0)
     const avgRemaining = totalRemaining / slot.availabilityDetails.length
@@ -279,7 +279,7 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
 
           {availabilityError && (
             <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               <AlertDescription>{availabilityError}</AlertDescription>
             </Alert>
           )}
@@ -333,7 +333,7 @@ export default function EnhancedBookingForm({ services, preSelectedServiceId }: 
 
           {!isLoadingAvailability && !availabilityError && timeSlots.length === 0 && selectedDate && selectedServiceIds.length > 0 && (
             <Alert>
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               <AlertDescription>
                 No available time slots found for the selected date and services. Please try a different date.
               </AlertDescription>

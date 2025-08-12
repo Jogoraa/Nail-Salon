@@ -3,6 +3,7 @@ import {
   updateServiceCapacity, 
   setCapacityOverride, 
   getServiceCapacityConfig,
+  getCapacityOverrides,
   addToWaitlist,
   getWaitlistEntries
 } from '@/lib/availability'
@@ -17,26 +18,35 @@ export async function GET(request: NextRequest) {
     const serviceId = searchParams.get('serviceId')
     const action = searchParams.get('action')
 
-    if (!serviceId) {
-      return NextResponse.json(
-        { error: 'Service ID is required' },
-        { status: 400 }
-      )
-    }
-
     switch (action) {
       case 'config':
+        if (!serviceId) {
+          return NextResponse.json(
+            { error: 'Service ID is required for config action' },
+            { status: 400 }
+          )
+        }
         const config = await getServiceCapacityConfig(serviceId)
         return NextResponse.json(config)
 
+      case 'overrides':
+        const overridesResult = await getCapacityOverrides(serviceId || undefined)
+        return NextResponse.json(overridesResult)
+
       case 'waitlist':
+        if (!serviceId) {
+          return NextResponse.json(
+            { error: 'Service ID is required for waitlist action' },
+            { status: 400 }
+          )
+        }
         const date = searchParams.get('date')
         const waitlist = await getWaitlistEntries(serviceId, date || undefined)
         return NextResponse.json({ waitlist })
 
       default:
         return NextResponse.json(
-          { error: 'Invalid action. Supported actions: config, waitlist' },
+          { error: 'Invalid action. Supported actions: config, overrides, waitlist' },
           { status: 400 }
         )
     }
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'update_capacity':
-        const { serviceId, maxBookingsPerSlot, startTime, endTime, slotDuration } = params
+        const { serviceId, maxBookingsPerSlot, startTime, endTime, slotDuration, bufferTime } = params
         
         if (!serviceId || maxBookingsPerSlot === undefined) {
           return NextResponse.json(
@@ -82,7 +92,8 @@ export async function POST(request: NextRequest) {
           maxBookingsPerSlot,
           startTime,
           endTime,
-          slotDuration
+          slotDuration,
+          bufferTime
         )
         return NextResponse.json(updateResult)
 

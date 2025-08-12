@@ -122,17 +122,6 @@ export default async function AdminDashboard() {
                   </Link>
                 </div>
               </div>
-
-              {/* Quick Actions */}
-              <div>
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Link href="/improved-booking" className="flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors duration-200">
-                    <Zap className="w-5 h-5" />
-                    <span>Test New System</span>
-                  </Link>
-                </div>
-              </div>
             </div>
           </nav>
         </div>
@@ -250,54 +239,6 @@ export default async function AdminDashboard() {
           </Card>
         </div>
 
-          {/* Improved Booking System Info */}
-        <div className="mb-8">
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center text-blue-900">
-                  <Zap className="w-6 h-6 mr-3 text-blue-600" />
-                  Revolutionary New Booking System
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-4 text-lg">🚀 What's New</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-blue-800">Service-first booking flow</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-blue-800">Real-time availability checking</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-blue-800">No more booking conflicts</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-blue-800">Enhanced user experience</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-4 text-lg">⚡ Quick Actions</h3>
-                    <div className="space-y-3">
-                      <Link href="/improved-booking">
-                        <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
-                          <Eye className="w-4 h-4 mr-2" />
-                          Test New System
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Capacity Management Section */}
           <div id="capacity" className="mb-8">
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
@@ -326,20 +267,6 @@ export default async function AdminDashboard() {
                     </CardTitle>
                     <p className="text-slate-600 text-sm mt-1">Manage all appointments and bookings</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filter
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                      <Download className="w-4 h-4 mr-2" />
-                      Export
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Refresh
-                    </Button>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -359,16 +286,6 @@ export default async function AdminDashboard() {
                       Contact Messages
                     </CardTitle>
                     <p className="text-slate-600 text-sm mt-1">Manage customer inquiries and feedback</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filter
-                    </Button>
                   </div>
                 </div>
               </CardHeader>

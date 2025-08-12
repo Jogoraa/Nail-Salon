@@ -64,8 +64,34 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
   const [showOverrideDialog, setShowOverrideDialog] = useState(false)
   const [selectedServiceForOverride, setSelectedServiceForOverride] = useState<string>("")
 
+  const loadOverrides = async () => {
+    try {
+      const response = await fetch('/api/admin/capacity?action=overrides', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.overrides) {
+          setOverrides(result.overrides)
+        } else {
+          console.warn("No overrides found or error:", result.message)
+          setOverrides([])
+        }
+      } else {
+        console.error("Failed to load overrides")
+        setOverrides([])
+      }
+    } catch (error) {
+      console.error("Error loading overrides:", error)
+      setOverrides([])
+    }
+  }
+
   useEffect(() => {
     loadServiceConfigs()
+    loadOverrides()
   }, [services])
 
   const loadServiceConfigs = async () => {
@@ -99,20 +125,33 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
         body: JSON.stringify({
           action: 'update_capacity',
           serviceId,
-          ...updates
+          maxBookingsPerSlot: updates.maxBookingsPerSlot,
+          startTime: updates.defaultStartTime,
+          endTime: updates.defaultEndTime,
+          slotDuration: updates.slotDuration,
+          bufferTime: updates.bufferTime
         })
       })
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Service capacity updated successfully" })
-        setEditingService(null)
-        loadServiceConfigs()
+        const result = await response.json()
+        if (result.success) {
+          setMessage({ type: "success", text: result.message || "Service capacity updated successfully" })
+          setEditingService(null)
+          loadServiceConfigs()
+        } else {
+          setMessage({ type: "error", text: result.message || "Failed to update service capacity" })
+        }
       } else {
-        throw new Error('Failed to update service capacity')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update service capacity')
       }
     } catch (error) {
       console.error("Error updating service capacity:", error)
-      setMessage({ type: "error", text: "Failed to update service capacity" })
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "Failed to update service capacity" 
+      })
     }
   }
 
@@ -128,26 +167,33 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create_override',
+          action: 'set_override',
           ...overrideData
         })
       })
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Capacity override created successfully" })
-        setShowOverrideDialog(false)
-        loadOverrides()
+        const result = await response.json()
+        if (result.success) {
+          setMessage({ type: "success", text: result.message || "Capacity override created successfully" })
+          setShowOverrideDialog(false)
+          // Reset form
+          setSelectedServiceForOverride("")
+          loadOverrides()
+        } else {
+          setMessage({ type: "error", text: result.message || "Failed to create capacity override" })
+        }
       } else {
-        throw new Error('Failed to create capacity override')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create capacity override')
       }
     } catch (error) {
       console.error("Error creating capacity override:", error)
-      setMessage({ type: "error", text: "Failed to create capacity override" })
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "Failed to create capacity override" 
+      })
     }
-  }
-
-  const loadOverrides = async () => {
-    // Implementation for loading overrides
   }
 
   const ServiceConfigCard = ({ config }: { config: ServiceCapacityConfig }) => {
@@ -499,19 +545,70 @@ export default function AdminCapacityManager({ services }: AdminCapacityManagerP
             </Button>
           </div>
           
-          <div className="bg-slate-50 rounded-lg p-6 text-center">
-            <Zap className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h4 className="text-lg font-medium text-slate-600 mb-2">No Overrides Yet</h4>
-            <p className="text-slate-500 mb-4">Create capacity overrides to handle special events, holidays, or peak times</p>
-            <Button
-              onClick={() => setShowOverrideDialog(true)}
-              variant="outline"
-              className="border-slate-300 text-slate-600 hover:bg-slate-100"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Override
-            </Button>
-          </div>
+          {overrides.length === 0 ? (
+            <div className="bg-slate-50 rounded-lg p-6 text-center">
+              <Zap className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-slate-600 mb-2">No Overrides Yet</h4>
+              <p className="text-slate-500 mb-4">Create capacity overrides to handle special events, holidays, or peak times</p>
+              <Button
+                onClick={() => setShowOverrideDialog(true)}
+                variant="outline"
+                className="border-slate-300 text-slate-600 hover:bg-slate-100"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create First Override
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {overrides.map((override) => (
+                <Card key={override.id} className="bg-white/60 backdrop-blur-sm border-0 shadow-lg">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                          <Zap className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm font-semibold text-slate-900">
+                            {override.services?.name || 'Unknown Service'}
+                          </CardTitle>
+                          <p className="text-xs text-slate-600">
+                            {new Date(override.override_date).toLocaleDateString()} at {override.override_time}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`${
+                          override.max_bookings === 0 
+                            ? 'bg-red-100 text-red-800 border-red-200' 
+                            : 'bg-blue-100 text-blue-800 border-blue-200'
+                        }`}
+                      >
+                        {override.max_bookings === 0 ? 'Closed' : `Max: ${override.max_bookings}`}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {override.reason && (
+                      <p className="text-sm text-slate-600 mb-3">{override.reason}</p>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>Created: {new Date(override.created_at).toLocaleDateString()}</span>
+                      <span className={`px-2 py-1 rounded-full ${
+                        override.is_active 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {override.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

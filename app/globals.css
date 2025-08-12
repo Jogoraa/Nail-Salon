@@ -100,6 +100,44 @@
     @apply bg-gradient-to-br from-rose-600 via-pink-600 to-purple-600;
   }
 
+  /* Floating animation for login page */
+  @keyframes float {
+    0%, 100% { 
+      transform: translateY(0px) rotate(0deg); 
+    }
+    33% { 
+      transform: translateY(-20px) rotate(120deg); 
+    }
+    66% { 
+      transform: translateY(-10px) rotate(240deg); 
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Enhanced pulse animation */
+  .animate-pulse-enhanced {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Smooth entrance animation */
+  .animate-entrance {
+    animation: entrance 0.8s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  }
+
+  @keyframes entrance {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .bg-gradient-accent {
     @apply bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600;
   }

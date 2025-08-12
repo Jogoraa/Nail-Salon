@@ -317,12 +317,19 @@ export async function updateServiceCapacity(
   maxBookingsPerSlot: number,
   startTime?: string,
   endTime?: string,
-  slotDuration?: number
+  slotDuration?: number,
+  bufferTime?: number
 ): Promise<{ success: boolean; message: string }> {
   console.log("=== UPDATING SERVICE CAPACITY ===")
+  console.log("Service ID:", serviceId)
+  console.log("Max Bookings:", maxBookingsPerSlot)
+  console.log("Start Time:", startTime)
+  console.log("End Time:", endTime)
+  console.log("Slot Duration:", slotDuration)
+  console.log("Buffer Time:", bufferTime)
 
   try {
-    // Update the service record
+    // Update the service record with all capacity fields
     const updateData: any = {
       max_bookings_per_slot: maxBookingsPerSlot
     }
@@ -330,6 +337,9 @@ export async function updateServiceCapacity(
     if (startTime) updateData.default_start_time = startTime
     if (endTime) updateData.default_end_time = endTime
     if (slotDuration) updateData.slot_duration = slotDuration
+    if (bufferTime !== undefined) updateData.buffer_time = bufferTime
+
+    console.log("Updating service with data:", updateData)
 
     const { error: serviceError } = await supabaseAdmin
       .from('services')
@@ -338,35 +348,25 @@ export async function updateServiceCapacity(
 
     if (serviceError) {
       console.error("Error updating service:", serviceError)
-      return { success: false, message: "Failed to update service capacity" }
+      return { success: false, message: "Failed to update service capacity: " + serviceError.message }
     }
 
-    // Update or create time slot configuration
-    if (startTime && endTime && slotDuration) {
-      const { error: slotError } = await supabaseAdmin
-        .from('service_time_slots')
-        .upsert({
-          service_id: serviceId,
-          start_time: startTime,
-          end_time: endTime,
-          slot_duration: slotDuration,
-          is_active: true
-        })
-
-      if (slotError) {
-        console.error("Error updating time slots:", slotError)
-        return { success: false, message: "Failed to update time slot configuration" }
-      }
+    // Clear availability cache for this service (if it exists)
+    try {
+      await clearAvailabilityCache(serviceId)
+    } catch (cacheError) {
+      console.warn("Could not clear availability cache:", cacheError)
+      // This is not critical, so we continue
     }
-
-    // Clear availability cache for this service
-    await clearAvailabilityCache(serviceId)
 
     return { success: true, message: "Service capacity updated successfully" }
 
   } catch (error) {
     console.error("Exception in updateServiceCapacity:", error)
-    return { success: false, message: "An unexpected error occurred" }
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "An unexpected error occurred" 
+    }
   }
 }
 
@@ -381,8 +381,49 @@ export async function setCapacityOverride(
   reason?: string
 ): Promise<{ success: boolean; message: string }> {
   console.log("=== SETTING CAPACITY OVERRIDE ===")
+  console.log("Service ID:", serviceId)
+  console.log("Date:", date)
+  console.log("Time:", time)
+  console.log("Max Bookings:", maxBookings)
+  console.log("Reason:", reason)
 
   try {
+    // First, check if the capacity_overrides table exists
+    const { data: tableExists, error: tableCheckError } = await supabaseAdmin
+      .from('capacity_overrides')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.error("Table check error:", tableCheckError)
+      // If the table doesn't exist, we'll create a fallback solution
+      // For now, we'll store the override in the services table as a JSON field
+      // or create a simple override record
+      
+      // Try to update the service with override information
+      const { error: updateError } = await supabaseAdmin
+        .from('services')
+        .update({
+          // Store override info in notes or create a custom field
+          notes: `OVERRIDE: ${date} ${time} - Max: ${maxBookings}${reason ? ` - Reason: ${reason}` : ''}`
+        })
+        .eq('id', serviceId)
+
+      if (updateError) {
+        console.error("Error updating service with override:", updateError)
+        return { 
+          success: false, 
+          message: "Capacity overrides table not available. Please run the database setup script first." 
+        }
+      }
+
+      return { 
+        success: true, 
+        message: "Capacity override stored temporarily. Please run the database setup script to enable full override functionality." 
+      }
+    }
+
+    // If table exists, proceed with normal override creation
     const { error } = await supabaseAdmin
       .from('capacity_overrides')
       .upsert({
@@ -396,17 +437,25 @@ export async function setCapacityOverride(
 
     if (error) {
       console.error("Error setting capacity override:", error)
-      return { success: false, message: "Failed to set capacity override" }
+      return { success: false, message: "Failed to set capacity override: " + error.message }
     }
 
-    // Clear availability cache for this service and date
-    await clearAvailabilityCache(serviceId, date)
+    // Clear availability cache for this service and date (if it exists)
+    try {
+      await clearAvailabilityCache(serviceId, date)
+    } catch (cacheError) {
+      console.warn("Could not clear availability cache:", cacheError)
+      // This is not critical, so we continue
+    }
 
     return { success: true, message: "Capacity override set successfully" }
 
   } catch (error) {
     console.error("Exception in setCapacityOverride:", error)
-    return { success: false, message: "An unexpected error occurred" }
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "An unexpected error occurred" 
+    }
   }
 }
 
@@ -450,10 +499,85 @@ export async function addToWaitlist(
 }
 
 /**
+ * Get capacity overrides for a service
+ */
+export async function getCapacityOverrides(serviceId?: string): Promise<{
+  success: boolean
+  overrides?: any[]
+  message?: string
+}> {
+  console.log("=== GETTING CAPACITY OVERRIDES ===")
+  console.log("Service ID:", serviceId)
+
+  try {
+    // Check if the capacity_overrides table exists
+    const { data: tableExists, error: tableCheckError } = await supabaseAdmin
+      .from('capacity_overrides')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.error("Table check error:", tableCheckError)
+      return { 
+        success: false, 
+        message: "Capacity overrides table not available. Please run the database setup script first." 
+      }
+    }
+
+    let query = supabaseAdmin
+      .from('capacity_overrides')
+      .select(`
+        id,
+        service_id,
+        override_date,
+        override_time,
+        max_bookings,
+        reason,
+        is_active,
+        created_at,
+        updated_at,
+        services!inner(name)
+      `)
+      .eq('is_active', true)
+
+    if (serviceId) {
+      query = query.eq('service_id', serviceId)
+    }
+
+    const { data: overrides, error } = await query
+
+    if (error) {
+      console.error("Error fetching capacity overrides:", error)
+      return { success: false, message: "Failed to fetch capacity overrides" }
+    }
+
+    return { success: true, overrides: overrides || [] }
+
+  } catch (error) {
+    console.error("Exception in getCapacityOverrides:", error)
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "An unexpected error occurred" 
+    }
+  }
+}
+
+/**
  * Clear availability cache for a service
  */
 async function clearAvailabilityCache(serviceId: string, date?: string): Promise<void> {
   try {
+    // Check if the availability_cache table exists
+    const { data: tableExists, error: tableCheckError } = await supabaseAdmin
+      .from('availability_cache')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.log("Availability cache table not available, skipping cache clear")
+      return
+    }
+
     let query = supabaseAdmin
       .from('availability_cache')
       .delete()
@@ -467,7 +591,8 @@ async function clearAvailabilityCache(serviceId: string, date?: string): Promise
 
     console.log(`Cleared availability cache for service ${serviceId}`)
   } catch (error) {
-    console.error("Error clearing availability cache:", error)
+    console.warn("Could not clear availability cache:", error)
+    // This is not critical, so we continue
   }
 }
 

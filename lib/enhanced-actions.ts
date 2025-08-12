@@ -267,51 +267,25 @@ export async function getBookingAvailability(date: string, serviceIds: string[])
       return { timeSlots: [], error: "Date and service selection required" }
     }
 
-    const availability = await getServiceAvailability({
-      date,
-      serviceIds,
-      startTime: "09:00",
-      endTime: "18:00",
-      slotDuration: 30
-    })
-
-    // Transform data for booking form
-    const timeSlots = []
-    const allTimes = new Set<string>()
-
-    // Collect all possible time slots
-    availability.services.forEach(service => {
-      service.timeSlots.forEach(slot => {
-        allTimes.add(slot.time)
+    // Use the API route instead of calling server function directly
+    const response = await fetch('/api/availability', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'get_booking_availability',
+        date,
+        serviceIds
       })
     })
 
-    // Check availability for each time slot
-    for (const time of Array.from(allTimes).sort()) {
-      const isAvailable = availability.services.every(service => {
-        const slot = service.timeSlots.find(s => s.time === time)
-        return slot && slot.isAvailable
-      })
-
-      const availabilityDetails = availability.services.map(service => {
-        const slot = service.timeSlots.find(s => s.time === time)
-        return {
-          serviceId: service.serviceId,
-          serviceName: service.serviceName,
-          remainingSlots: slot?.availableSlots || 0,
-          isAvailable: slot?.isAvailable || false
-        }
-      })
-
-      timeSlots.push({
-        time,
-        label: formatTimeForDisplay(time),
-        isAvailable,
-        availabilityDetails
-      })
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
 
-    return { timeSlots, error: null }
+    const result = await response.json()
+    return result
 
   } catch (error) {
     console.error("Exception in getBookingAvailability:", error)
@@ -319,15 +293,7 @@ export async function getBookingAvailability(date: string, serviceIds: string[])
   }
 }
 
-/**
- * Format time for display (e.g., "09:00" -> "9:00 AM")
- */
-function formatTimeForDisplay(time: string): string {
-  const [hours, minutes] = time.split(':').map(Number)
-  const period = hours >= 12 ? 'PM' : 'AM'
-  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
-}
+
 
 /**
  * Check if a specific time slot is available for selected services
@@ -369,35 +335,36 @@ export async function getSuggestedTimeSlots(
   try {
     console.log("Getting suggested time slots for:", { serviceIds, preferredDate, preferredTime })
 
-    // Get availability for the entire day
-    const availability = await getServiceAvailability({
-      date: preferredDate,
-      serviceIds,
-      startTime: "09:00",
-      endTime: "18:00",
-      slotDuration: 30
+    // Use the API route to get availability
+    const response = await fetch('/api/availability', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'get_booking_availability',
+        date: preferredDate,
+        serviceIds
+      })
     })
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.error) {
+      throw new Error(result.error)
+    }
 
     // Find available time slots
     const availableSlots: string[] = []
-    const allTimes = new Set<string>()
 
-    availability.services.forEach(service => {
-      service.timeSlots.forEach(slot => {
-        allTimes.add(slot.time)
-      })
-    })
-
-    for (const time of Array.from(allTimes).sort()) {
-      const isAvailable = availability.services.every(service => {
-        const slot = service.timeSlots.find(s => s.time === time)
-        return slot && slot.isAvailable
-      })
-
-      if (isAvailable && time !== preferredTime) {
-        availableSlots.push(time)
+    result.timeSlots.forEach((slot: any) => {
+      if (slot.isAvailable && slot.time !== preferredTime) {
+        availableSlots.push(slot.time)
       }
-    }
+    })
 
     // Return up to 5 suggestions, prioritizing times close to preferred time
     const preferredTimeMinutes = timeToMinutes(preferredTime)
